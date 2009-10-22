@@ -2,9 +2,9 @@
 #
 # For now, can be applied as
 # dcraw -w -T -4 file.cr2
-# gmic gmicext.gmic file.tiff -l16boost -c 0,65536 -type ushort -o newfile.tiff
+# gmic gmicext.gmic file.tiff -l16boost -l16develop newfile.tiff
 
-#@gmic l16boost : : Operations on a linear 16 bit images: gamma, contrast, color boost.
+#@gmic l16boost : : Operations on linear 16 bit image: gamma, contrast, color boost.
 l16boost :
    -e "Gamma, contrast, color boost on image$?."
    -v- -type float -repeat @#
@@ -12,5 +12,12 @@ l16boost :
    -gimp_tones_correction 2.2,1.1,0,0,0,2 
    -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2 
    -mul 256 
+   -mv[-1] 0 -done -v+
+
+#@gmic l16develop : '"outfile"' : Develop a linear 16 image and write it to outfile .
+l16develop :
+   -e "Developing / writing image$?."
+   -v- -repeat @#
+   -c 0,65536 -type ushort -o $1
    -mv[-1] 0 -done -v+
 
