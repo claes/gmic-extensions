@@ -1,0 +1,12 @@
+# G'MIC extensions. Focused on RAW file usage
+
+#@gmic l16boost : : Operations on a linear 16 bit images: gamma, contrast, color boost.
+l16boost :
+   -e "Gamma, contrast, color boost on image$?."
+   -v- -type float -repeat @#
+   -div 256 
+   -gimp_tones_correction 2.2,1.1,0,0,0,2 
+   -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2 
+   -mul 256 
+   -mv[-1] 0 -done -v+
+
