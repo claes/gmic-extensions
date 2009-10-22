@@ -2,8 +2,8 @@
 #
 # For now, can be applied as
 # dcraw -w -T -4 file.cr2
-# followed by 
-# gmic gmicext.gmic file.tiff -16develop newfile.tiff
+# which creates file.tiff. Then followed by 
+# gmic gmicext.gmic file.tiff -l16develop newfile.tiff
 
 #@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to file.
 l16develop :
