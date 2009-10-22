@@ -1,4 +1,8 @@
-# G'MIC extensions. Focused on RAW file usage
+# G'MIC extensions. Focused on RAW file processing
+#
+# For now, can be applied as
+# dcraw -w -T -4 file.cr2
+# gmic gmicext.gmic file.tiff -l16boost -c 0,65536 -type ushort -o newfile.tiff
 
 #@gmic l16boost : : Operations on a linear 16 bit images: gamma, contrast, color boost.
 l16boost :
