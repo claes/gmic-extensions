@@ -5,26 +5,165 @@
 # which creates file.tiff. Then followed by 
 # gmic gmicext.gmic file.tiff -l16develop newfile.tiff
 
-#@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to file.
+#@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
 l16develop :
    -e "Develop image$?."
    -v- -repeat @#
    -l16boost -16write $1
    -done -v+
 
+#@gmic l16develop_preview : '"outfile"' : Develop a linear 16 bit image, downsize it to preview size, and write to 8 bit file.
+l16develop_preview :
+   -e "Develop image$?."
+   -v- -repeat @#
+   -l16boost -resize_thebigpicture -16to8 -8write $1
+   -done -v+
+
 #@gmic l16boost : : Operations on linear 16 bit image: gamma, contrast, color boost.
 l16boost :
    -e "Gamma, contrast, color boost on image$?."
    -v- -type float -repeat @#
+   # RGB operations requires values in 8-bit range, so downsize (will still be floating point so high precision)
    -div 256 
-   -gimp_tones_correction 2.2,1.1,0,0,0,2 
+   -gimp_tones_correction 2.2,1.2,0,0,0,2 
    -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2 
    -mul 256 
    -mv[-1] 0 -done -v+
 
-#@gmic 16write : '"outfile"' : Write a 16 bit image to file.
+#@gmic sharpen_smooth : : Perform sharpening followed by smoothing, as a denoisement method
+sharpen_smooth :
+   -e "Sharpen and smooth image$?."
+   -v- -type float -repeat @#
+   -sharpen 50 -smooth 25
+   -mul 256 
+   -mv[-1] 0 -done -v+
+
+#@gmic 16to8 : : Convert image values retrieved in 16 bit to fit in 8 bit.
+16to8 :
+   -e "Converting to 8 bit for image$?."
+   -v- -repeat @#
+   -div 256
+   -mv[-1] 0 -done -v+
+
+#@gmic 16write : '"outfile"' : Write 16 bit image to file.
 16write :
    -e "Writing image$?."
    -v- -repeat @#
    -c 0,65536 -type ushort -o $1
    -mv[-1] 0 -done -v+
+
+#@gmic 8write : '"outfile"' : Write 8 bit image to file.
+8write :
+   -e "Writing image$?."
+   -v- -repeat @#
+   -c 0,255 -type uchar -o $1
+   -mv[-1] 0 -done -v+
+
+# Resizing uses bicubic interpolation
+
+
+#@gmic strcmp : : Compare strings, returning 1 if they are equal, 0 if they are not
+strcmp:
+  -v- (0,{$1_}) (@{-1,w},{$2_}) -=[-2] @{-1,w} --[-2,-1] -abs[-1] -p {!@{-1,+}} -rm[-1] -v+
+
+#@gmic resize_named : '"named_size"' : Resize the image to a named size. 
+resize_named :
+    -e "Resizing image image$? to $1 size."
+    -v- -repeat @#
+
+    # Screen resolutions
+
+    -strcmp qqvga,$1 
+    -if @{*,-1}  
+      -resize2dx 160,5
+    -endif -pp[-1]
+
+    -strcmp hqvga,$1 
+    -if @{*,-1}  
+      -resize2dx 240,5
+    -endif -pp[-1]
+
+    -strcmp qvga,$1 
+    -if @{*,-1}  
+      -resize2dx 320,5
+    -endif -pp[-1]
+
+    -strcmp wqvga,$1 
+    -if @{*,-1}  
+      -resize2dx 480,5
+    -endif -pp[-1]
+
+    -strcmp vga,$1 
+    -if @{*,-1}  
+      -resize2dx 680,5
+    -endif -pp[-1]
+
+    -strcmp svga,$1 
+    -if @{*,-1}  
+      -resize2dx 800,5
+    -endif -pp[-1]
+
+    -strcmp xga,$1 
+    -if @{*,-1}  
+      -resize2dx 1024,5
+    -endif -pp[-1]
+
+    -strcmp sxga,$1 
+    -if @{*,-1}  
+      -resize2dx 1280,5
+    -endif -pp[-1]
+
+    -strcmp wxga,$1 
+    -if @{*,-1}  
+      -resize2dx 1366,5
+    -endif -pp[-1]
+
+    -strcmp wsxga,$1 
+    -if @{*,-1}  
+      -resize2dx 1440,5
+    -endif -pp[-1]
+
+    -strcmp wsxga+,$1 
+    -if @{*,-1}  
+      -resize2dx 1680,5
+    -endif -pp[-1]
+
+    -strcmp wuxga,$1 
+    -if @{*,-1}  
+      -resize2dx 1920,5
+    -endif -pp[-1]
+
+    -strcmp wqxga,$1 
+    -if @{*,-1}  
+      -resize2dx 2560,5
+    -endif -pp[-1]
+
+    -strcmp wquxga,$1 
+    -if @{*,-1}  
+      -resize2dx 3840,5
+    -endif -pp[-1]
+
+    # Web inspired
+
+    -strcmp flickr_large,$1 
+    -if @{*,-1}  
+      -resize2dx 1024,5
+    -endif -pp[-1]
+
+    -strcmp thebigpicture,$1 
+    -if @{*,-1}  
+      -resize2dx 990,5
+    -endif -pp[-1] 
+
+    # Camera specific
+    
+    -strcmp 400D_preview,$1 
+    -if @{*,-1}  
+      -resize2dx 1936,5
+
+
+    -endif -pp[-1] 
+    
+
+
+    -mv[-1] 0 -done -v+
