@@ -1,0 +1,13 @@
+Simple wrapper script around dcraw and G'MIC. For command line processing of raw images.
+Camera profiles originally from dcraw source, extracted with dlRaw.
+
+Change the script to point to your installation directory and camera profile. 
+
+To view raw file:
+gmicraw example.cr2
+
+To create jpg preview from raw file:
+gmicraw example.cr2 -l16develop_preview example.jpg
+
+To create 16 bit full size tiff from raw file:
+gmicraw example.cr2 -l16develop example.tiff

@@ -5,6 +5,7 @@
 # which creates file.tiff. Then followed by 
 # gmic gmicext.gmic file.tiff -l16develop newfile.tiff
 
+
 #@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
 l16develop :
    -e "Develop image$?."
@@ -16,16 +17,16 @@ l16develop :
 l16develop_preview :
    -e "Develop image$?."
    -v- -repeat @#
-   -l16boost -resize_thebigpicture -16to8 -8write $1
+   -l16boost -resize_named thebigpicture -16to8 -8write $1
    -done -v+
 
-#@gmic l16boost : : Operations on linear 16 bit image: gamma, contrast, color boost.
+#@gmic l16boost : : Operations on linear 16 bit image: Contrast and color boost.
 l16boost :
-   -e "Gamma, contrast, color boost on image$?."
+   -e "Contrast, color boost on image$?."
    -v- -type float -repeat @#
    # RGB operations requires values in 8-bit range, so downsize (will still be floating point so high precision)
    -div 256 
-   -gimp_tones_correction 2.2,1.2,0,0,0,2 
+   -gimp_tones_correction 1,1.2,0,0,0,2 
    -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2 
    -mul 256 
    -mv[-1] 0 -done -v+
@@ -58,9 +59,6 @@ sharpen_smooth :
    -v- -repeat @#
    -c 0,255 -type uchar -o $1
    -mv[-1] 0 -done -v+
-
-# Resizing uses bicubic interpolation
-
 
 #@gmic strcmp : : Compare strings, returning 1 if they are equal, 0 if they are not
 strcmp:
@@ -160,10 +158,6 @@ resize_named :
     -strcmp 400D_preview,$1 
     -if @{*,-1}  
       -resize2dx 1936,5
-
-
     -endif -pp[-1] 
     
-
-
     -mv[-1] 0 -done -v+

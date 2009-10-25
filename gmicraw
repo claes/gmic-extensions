@@ -1,0 +1,10 @@
+#!/bin/sh
+# Wrapper script around dcraw and G'MIC
+# Copyright Claes Holmerson 2009, GPL licensed (see COPYING for details)
+
+GMICRAW_HOME=/home/claes/projects/gmic-extensions
+CAMERA_PROFILE=$GMICRAW_HOME/Profiles/Camera/Standard/Canon_EOS_400D.icc
+GMIC_EXTENSION=$GMICRAW_HOME/gmicext.gmic
+RAW_INPUT=$1
+shift 1
+dcraw -c -w -4 -p $CAMERA_PROFILE $RAW_INPUT | gmic -m $GMIC_EXTENSION -.ppm $@
