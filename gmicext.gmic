@@ -9,65 +9,82 @@
 #@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
 l16develop :
    -e "Develop image$?."
-   -v- -repeat @#
+   -v - -repeat @#
    -l16boost -16write $1
-   -done -v+
+   -done -v +
 
 #@gmic l16develop_preview : '"outfile"' : Develop a linear 16 bit image, downsize it to preview size, and write to 8 bit file.
 l16develop_preview :
    -e "Develop image$?."
-   -v- -repeat @#
+   -v - -repeat @#
    -l16boost -resize_named thebigpicture -16to8 -8write $1
-   -done -v+
+   -done -v +
 
 #@gmic l16boost : : Operations on linear 16 bit image: Contrast and color boost.
 l16boost :
    -e "Contrast, color boost on image$?."
-   -v- -type float -repeat @#
+   -v - -type float -repeat @#
    # RGB operations requires values in 8-bit range, so downsize (will still be floating point so high precision)
-   -div 256 
-   -gimp_tones_correction 1,1.2,0,0,0,2 
-   -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2 
-   -mul 256 
-   -mv[-1] 0 -done -v+
+   -div 256
+   -gimp_channel_processing 2.2,1,60,0,2,4,99,256,0,0,0,2,0
+   -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2
+   -mul 256
+   -mv[-1] 0 -done -v +
+
 
 #@gmic sharpen_smooth : : Perform sharpening followed by smoothing, as a denoisement method
 sharpen_smooth :
    -e "Sharpen and smooth image$?."
-   -v- -type float -repeat @#
+   -v - -type float -repeat @#
    -sharpen 50 -smooth 25
    -mul 256 
-   -mv[-1] 0 -done -v+
+   -mv[-1] 0 -done -v +
 
 #@gmic 16to8 : : Convert image values retrieved in 16 bit to fit in 8 bit.
 16to8 :
    -e "Converting to 8 bit for image$?."
-   -v- -repeat @#
+   -v - -repeat @#
    -div 256
-   -mv[-1] 0 -done -v+
+   -mv[-1] 0 -done -v +
 
 #@gmic 16write : '"outfile"' : Write 16 bit image to file.
 16write :
    -e "Writing image$?."
-   -v- -repeat @#
+   -v - -repeat @#
    -c 0,65536 -type ushort -o $1
-   -mv[-1] 0 -done -v+
+   -mv[-1] 0 -done -v +
 
 #@gmic 8write : '"outfile"' : Write 8 bit image to file.
 8write :
    -e "Writing image$?."
-   -v- -repeat @#
+   -v - -repeat @#
    -c 0,255 -type uchar -o $1
-   -mv[-1] 0 -done -v+
+   -mv[-1] 0 -done -v +
 
-#@gmic strcmp : : Compare strings, returning 1 if they are equal, 0 if they are not
-strcmp:
-  -v- (0,{$1_}) (@{-1,w},{$2_}) -=[-2] @{-1,w} --[-2,-1] -abs[-1] -p {!@{-1,+}} -rm[-1] -v+
+#@gmic contrast_stretch : cut_low[%], cut_high[%], normalize_low[%], normalize_high[%] : Stretch contrast of image.
+contrast_stretch :
+   -e "Stretching contrast of image$?."
+   -v - -repeat @#
+   -c  $1,$2 -n $3,$4
+   -mv[-1] 0 -done -v +
+
+#@gmic contrast_stretchx : black, white: Stretch contrast of image.
+contrast_stretchx :
+   -e "Stretching contrast of image$?."
+   -v - -repeat @#
+   --histogram_cumul 256 
+   -div[-1] {"@{0,#}"} [-1] 
+   -p 0 -do -shift[-1] -1 -pr[-1] "{@{*,-1}+1}" -while "{@{-1,(0)}<$1}"
+   -rm[-1]
+   -p 0 -do -shift[-1] 1 -pr[-1] "{@{*,-1}+1}" -while "{@{-1,(255)}>$2}"    
+   -rm[-1] 
+   -contrast_stretch "{@{*,-2}}","{@{*,-1}}","{0-@{*,-2}}","{255+@{*,-1}}"
+   -mv[-1] 0 -done -v +
 
 #@gmic resize_named : '"named_size"' : Resize the image to a named size. 
 resize_named :
     -e "Resizing image image$? to $1 size."
-    -v- -repeat @#
+    -v - -repeat @#
 
     # Screen resolutions
 
@@ -160,4 +177,4 @@ resize_named :
       -resize2dx 1936,5
     -endif -pp[-1] 
     
-    -mv[-1] 0 -done -v+
+    -mv[-1] 0 -done -v +
