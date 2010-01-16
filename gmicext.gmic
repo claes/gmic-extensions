@@ -40,22 +40,22 @@ sharpen_smooth :
    -mul 256 
    -mv[-1] 0 -done -v +
 
-#@gmic 16to8 : : Convert image values retrieved in 16 bit to fit in 8 bit.
-16to8 :
+#@gmic convert16to8 : : Convert image values retrieved in 16 bit to fit in 8 bit.
+convert16to8 :
    -e "Converting to 8 bit for image$?."
    -v - -repeat @#
    -div 256
    -mv[-1] 0 -done -v +
 
-#@gmic 16write : '"outfile"' : Write 16 bit image to file.
-16write :
+#@gmic write16 : '"outfile"' : Write 16 bit image to file.
+write16 :
    -e "Writing image$?."
    -v - -repeat @#
    -c 0,65536 -type ushort -o $1
    -mv[-1] 0 -done -v +
 
-#@gmic 8write : '"outfile"' : Write 8 bit image to file.
-8write :
+#@gmic write8 : '"outfile"' : Write 8 bit image to file.
+write8 :
    -e "Writing image$?."
    -v - -repeat @#
    -c 0,255 -type uchar -o $1
@@ -65,7 +65,7 @@ sharpen_smooth :
 contrast_stretch :
    -e "Stretching contrast of image$?."
    -v - -repeat @#
-   -c  $1,$2 -n $3,$4
+   -c  $1,$2 -n -15%,100%
    -mv[-1] 0 -done -v +
 
 #@gmic contrast_stretchx : black, white: Stretch contrast of image.
@@ -73,12 +73,13 @@ contrast_stretchx :
    -e "Stretching contrast of image$?."
    -v - -repeat @#
    --histogram_cumul 256 
-   -div[-1] {"@{0,#}"} [-1] 
-   -p 0 -do -shift[-1] -1 -pr[-1] "{@{*,-1}+1}" -while "{@{-1,(0)}<$1}"
+   -div[-1] @{0,#} [-1]
+   -p 0 -do -shift[-1] -1 -pr[-1] {@{*,-1}+1} -while {@{-1,(0)}<$1}
    -rm[-1]
-   -p 0 -do -shift[-1] 1 -pr[-1] "{@{*,-1}+1}" -while "{@{-1,(255)}>$2}"    
+   -p 0 -do -shift[-1] 1 -pr[-1] {@{*,-1}+1} -while {@{-1,(255)}>$2}
    -rm[-1] 
-   -contrast_stretch "{@{*,-2}}","{@{*,-1}}","{0-@{*,-2}}","{255+@{*,-1}}"
+   -contrast_stretch {@{*,-2}},{@{*,-1}},{0-@{*,-2}},{255+@{*,-1}}
+   -pop -pop
    -mv[-1] 0 -done -v +
 
 #@gmic resize_named : '"named_size"' : Resize the image to a named size. 
