@@ -5,6 +5,23 @@
 # which creates file.tiff. Then followed by 
 # gmic gmicext.gmic file.tiff -l16develop newfile.tiff
 
+#@gmic disp : : Display image, unnormalized.
+disp:
+   -w -1,-1,0 -d
+
+#@gmic plot_rgb_histogram : : Plot image for RGB colors
+plot_rgb_histogram:
+   -e "Plot RGB histogram of image$?."
+   -v - -repeat @#
+   -s c -histogram 256 -a c -plot 3
+   -done -v +
+
+#@gmic plot_histogram : : Plot image for RGB colors
+plot_histogram:
+   -e "Plot RGB histogram of image$?."
+   -v - -repeat @#
+   -histogram 256 -plot 3
+   -done -v +
 
 #@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
 l16develop :
@@ -63,22 +80,23 @@ write8 :
 
 #@gmic contrast_stretch : cut_low[%], cut_high[%], normalize_low[%], normalize_high[%] : Stretch contrast of image.
 contrast_stretch :
-   -e "Stretching contrast of image$?."
+   -e "Stretching contrast of image$? with $1,$2,$3,$4."
    -v - -repeat @#
-   -c  $1,$2 -n -15%,100%
+   -c $1,$2 
+   -n $3,$4
    -mv[-1] 0 -done -v +
 
-#@gmic contrast_stretchx : black, white: Stretch contrast of image.
-contrast_stretchx :
+#@gmic contrast_stretchy : black, white: Stretch contrast of image.
+contrast_stretchy :
    -e "Stretching contrast of image$?."
    -v - -repeat @#
-   --histogram_cumul 256 
+   --histogram_cumul 256
    -div[-1] @{0,#} [-1]
-   -p 0 -do -shift[-1] -1 -pr[-1] {@{*,-1}+1} -while {@{-1,(0)}<$1}
+   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
-   -p 0 -do -shift[-1] 1 -pr[-1] {@{*,-1}+1} -while {@{-1,(255)}>$2}
+   -push 255 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
    -rm[-1] 
-   -contrast_stretch {@{*,-2}},{@{*,-1}},{0-@{*,-2}},{255+@{*,-1}}
+   -contrast_stretch {@{*,-2}},{@{*,-1}},0,255
    -pop -pop
    -mv[-1] 0 -done -v +
 
