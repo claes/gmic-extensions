@@ -5,49 +5,19 @@
 # which creates file.tiff. Then followed by 
 # gmic gmicext.gmic file.tiff -l16develop newfile.tiff
 
-#@gmic disp : : Display image, unnormalized.
-disp:
-   -w -1,-1,0 -d
-
-#@gmic plot_rgb_histogram : : Plot image for RGB colors
-plot_rgb_histogram:
-   -e "Plot RGB histogram of image$?."
-   -v - -repeat @#
-   -s c -histogram 256 -a c -plot 3
-   -done -v +
-
-#@gmic plot_histogram : : Plot image for RGB colors
-plot_histogram:
-   -e "Plot RGB histogram of image$?."
-   -v - -repeat @#
-   -histogram 256 -plot 3
-   -done -v +
-
 #@gmic l16develop : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
 l16develop :
    -e "Develop image$?."
    -v - -repeat @#
-   -l16boost -16write $1
+   -apply_gamma 2.2 -contrast_stretch16 0.01,0.01 -16write $1
    -done -v +
 
 #@gmic l16develop_preview : '"outfile"' : Develop a linear 16 bit image, downsize it to preview size, and write to 8 bit file.
 l16develop_preview :
    -e "Develop image$?."
    -v - -repeat @#
-   -l16boost -resize_named thebigpicture -16to8 -8write $1
+   -resize_named thebigpicture -apply_gamma 2.2 -contrast_stretch16 0.01,0.01 -convert16to8 -write8 $1
    -done -v +
-
-#@gmic l16boost : : Operations on linear 16 bit image: Contrast and color boost.
-l16boost :
-   -e "Contrast, color boost on image$?."
-   -v - -type float -repeat @#
-   # RGB operations requires values in 8-bit range, so downsize (will still be floating point so high precision)
-   -div 256
-   -gimp_channel_processing 2.2,1,60,0,2,4,99,256,0,0,0,2,0
-   -gimp_mix_lab 1,0,0,1.3,0,0,1.3,0,0,0,2
-   -mul 256
-   -mv[-1] 0 -done -v +
-
 
 #@gmic sharpen_smooth : : Perform sharpening followed by smoothing, as a denoisement method
 sharpen_smooth :
@@ -78,17 +48,10 @@ write8 :
    -c 0,255 -type uchar -o $1
    -mv[-1] 0 -done -v +
 
-#@gmic contrast_stretch : cut_low[%], cut_high[%], normalize_low[%], normalize_high[%] : Stretch contrast of image.
-contrast_stretch :
-   -e "Stretching contrast of image$? with $1,$2,$3,$4."
-   -v - -repeat @#
-   -c $1,$2 
-   -n $3,$4
-   -mv[-1] 0 -done -v +
-
-#@gmic contrast_stretchy : black, white: Stretch contrast of image.
-contrast_stretchy :
-   -e "Stretching contrast of image$?."
+#@gmic contrast_stretch8 : black, white: Stretch contrast of 8 bit image.
+contrast_stretch8: 
+   -skip ${1=0.02},${2=0.01}
+   -e "Stretching contrast of image$? with black $1 and white $2."
    -v - -repeat @#
    --histogram_cumul 256
    -div[-1] @{0,#} [-1]
@@ -96,9 +59,53 @@ contrast_stretchy :
    -rm[-1]
    -push 255 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
    -rm[-1] 
-   -contrast_stretch {@{*,-2}},{@{*,-1}},0,255
+   -_contrast_stretch {@{*,-2}},{@{*,-1}},0,255
    -pop -pop
    -mv[-1] 0 -done -v +
+
+#@gmic contrast_stretch16 : black, white: Stretch contrast of 16 bit image.
+contrast_stretch16: 
+   -skip ${1=0.02},${2=0.01}
+   -e "Stretching contrast of image$? with black $1 and white $2."
+   -v - -repeat @#
+   --histogram_cumul 255
+   -div[-1] @{0,#} [-1]
+   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -rm[-1]
+   -push 255 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
+   -rm[-1] 
+   -_contrast_stretch {{@{*,-2}}*255},{{@{*,-1}}*255},0,65535
+   -pop -pop
+   -mv[-1] 0 -done -v +
+
+#@gmic _contrast_stretch : cut_low[%], cut_high, normalize_low, normalize_high : Stretch contrast of image.
+_contrast_stretch :
+   -e "Stretching contrast of image$? with $1,$2,$3,$4."
+   -v - -repeat @#
+   -c $1,$2 
+   -n $3,$4
+   -mv[-1] 0 -done -v +
+#@gmic disp : : Display image, unnormalized.
+disp:
+   -w -1,-1,0 -d
+
+#@gmic plot_rgb_histogram : : Plot image for RGB colors
+plot_rgb_histogram:
+   -e "Plot RGB histogram of image$?."
+   -v - -repeat @#
+   -s c -histogram 256 -a c -plot 3
+   -done -v +
+
+#@gmic plot_histogram : : Plot image for RGB colors
+plot_histogram:
+   -e "Plot RGB histogram of image$?."
+   -v - -repeat @#
+   -histogram 256 -plot 3
+   -done -v +
+
+#@gmic strcmp : : Compare strings, returning 1 if they are equal, 0 if they are not
+strcmp:
+  -v - (0,{$1_}) (@{-1,w},{$2_}) -=[-2] @{-1,w} --[-2,-1] -abs[-1] -p {!@{-1,+}} -rm[-1] -v +
 
 #@gmic resize_named : '"named_size"' : Resize the image to a named size. 
 resize_named :
@@ -106,8 +113,7 @@ resize_named :
     -v - -repeat @#
 
     # Screen resolutions
-
-    -strcmp qqvga,$1 
+    -strcmp qqvga,$1
     -if @{*,-1}  
       -resize2dx 160,5
     -endif -pp[-1]
