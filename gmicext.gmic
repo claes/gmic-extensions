@@ -10,7 +10,7 @@ l16develop :
    -e "Develop image$?."
    -v - -repeat @#
    -apply_gamma 2.2
-   -contrast_stretch16 0.015,0.01
+   -contrast_stretch 0.015,0.01,16
    -done -v +
 
 #@gmic l16develop_write_full : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
@@ -56,6 +56,21 @@ write8 :
    -c 0,255 -type uchar -o $1
    -mv[-1] 0 -done -v +
 
+#@gmic blackpoint : black, bitdepth: Make certain percentage of the image black.
+blackpoint: 
+   -skip ${1=0.02},${2=8}
+   -e "Black-pointing $2-bit image$? with black $1."
+   -v - -repeat @#
+   --histogram_cumul {2^$2}
+   -div[-1] @{0,#}
+   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -rm[-1]
+   -v + -v + -v +  
+   -cut {@{*,-1}},{2^$2-1} -sub {@{*,-1}}
+   -v - -v - -v -
+   -pop   
+   -mv[-1] 0 -done -v +
+
 #@gmic blackpoint8 : black: Make certain percentage of the image black.
 blackpoint8: 
    -skip ${1=0.02}
@@ -66,6 +81,7 @@ blackpoint8:
    -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
    -cut {@{*,-1}},255 -sub {@{*,-1}}
+   -pop   
    -mv[-1] 0 -done -v +
 
 #@gmic blackpoint16 : black: Make certain percentage of the image black.
@@ -78,6 +94,48 @@ blackpoint16:
    -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
    -cut {@{*,-1}},65535 -sub {@{*,-1}*64}
+   -pop
+   -mv[-1] 0 -done -v +
+
+#@gmic whitepoint : white, bitdepth: Make certain percentage of the image white.
+whitepoint: 
+   -skip ${1=0.02}${2=8}
+   -e "White-pointing $2-bit image$? with white $1."
+   -v - -repeat @#
+   --histogram_cumul {2^$2}
+   -div[-1] @{0,#}
+   -push {2^$2-1} -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>$1}
+   -rm[-1]
+   -f min({2^$2-1},i+@{*,-1})
+   -pop
+   -mv[-1] 0 -done -v +
+
+#@gmic whitepoint8 : white: Make certain percentage of the image white.
+whitepoint8: 
+   -skip ${1=0.02}
+   -e "Black-pointing image$? with black $1."
+   -v - -repeat @#
+   --histogram_cumul 256
+   -div[-1] @{0,#}
+   -push 255 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>$1}
+   -rm[-1]
+   -f min(255,i+@{*,-1})
+   -pop
+   -mv[-1] 0 -done -v +
+
+#@gmic contrast_stretch : black, white, bit-depth: Stretch contrast of 8 bit image.
+contrast_stretch: 
+   -skip ${1=0.02},${2=0.01},${3=8}
+   -e "Stretching contrast of $3-bit image$? with black $1 and white $2."
+   -v - -repeat @#
+   --histogram_cumul {2^$3}
+   -div[-1] @{0,#} [-1]
+   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -rm[-1]
+   -push {2^$3-1} -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
+   -rm[-1] 
+   -_contrast_stretch {@{*,-2}},{@{*,-1}},0,{2^$3-1}
+   -pop -pop
    -mv[-1] 0 -done -v +
 
 #@gmic contrast_stretch8 : black, white: Stretch contrast of 8 bit image.
@@ -118,17 +176,20 @@ _contrast_stretch :
    -n $3,$4
    -mv[-1] 0 -done -v +
 
-#@gmic apply_sigmoidal : contrast,threshold : Apply sigmoidal function.
-apply_sigmoidal :
+#@gmic sigmoidal_contrast16 : contrast,threshold: Apply sigmoidal function to 8 bit image.
+sigmoidal_contrast8 :
+   -skip ${1=3},${2=0.5}
    -e "Applying sigmoidal function on image$? using contrast $1 and threshold $2."
    -v - -repeat @#
-   #-f A=1+exp($1*($2-i));B=1+exp($1);max(1,(1/A-1/B)/(1/A/B))
-   #-f A=1+exp($1*($2-i/$3));B=1+exp($1);S=((1/A-1/B)/(1/A/B));max(min(S*$3,$3),0)
-   -f A=1+exp($1*($2-i/$3));B=1+exp($1);S=((1/A-1/B)/(1/A/B));S*$3
-   #-f A=1+exp($1*($2-i));B=1+exp($1);(1/A-1/B)/(1/A/B)
-   #-f A=1+exp($1*($2-i/$3));B=1+exp($1);((1/A-1/B)/(1/A/B))*$3
-   #-f A=1+exp($1*($2-i/$3));B=1+exp($1);max(1,((1/A-1/B)/(1/A/B)))*$3
-   #-f A=1+exp($1*($2-i/$3));B=1+exp($1);max(((1/A-1/B)/(1/A/B))*$3,1)
+   -f A=1+exp($1);B=exp($1*($2-i/256));S=(1/(1+B)-1/A)/(1/(1+B/A));S*256
+   -mv[-1] 0 -done -v +
+
+#@gmic sigmoidal_contrast16 : contrast,threshold: Apply sigmoidal function to 16 bit image.
+sigmoidal_contrast16 :
+   -skip ${1=3},${2=0.5}
+   -e "Applying sigmoidal function on image$? using contrast $1 and threshold $2."
+   -v - -repeat @#
+   -f A=1+exp($1);B=exp($1*($2-i/65536));S=(1/(1+B)-1/A)/(1/(1+B/A));S*65536
    -mv[-1] 0 -done -v +
 
 color_boost :
