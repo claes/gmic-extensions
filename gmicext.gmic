@@ -10,7 +10,33 @@ l16develop :
    -e "Develop image$?."
    -v - -repeat @#
    -apply_gamma 2.2
-   -contrast_stretch 0.015,0.01,16
+   -contrast_stretch 0.005,0.005,16
+   -done -v +
+
+#@gmic l16develop_1 : : Process linear 16 bit image.
+l16develop_1 :
+   -e "Develop image$?."
+   -v - -repeat @#
+   -sigmoidal_contrast16 4,0.001	
+   -apply_gamma 2.2
+   -contrast_stretch 0.005,0.005,16
+   -done -v +
+
+#@gmic l16develop_2 : : Process linear 16 bit image.
+l16develop_2 :
+   -e "Develop image$?."
+   -v - -repeat @#
+   -apply_gamma 2.2
+   -sigmoidal_contrast16 5,0.82	
+   -contrast_stretch 0.005,0.005,16
+   -done -v +
+
+#@gmic g16develop_1 : : Process 16 bit image that has gamma.
+g16develop :
+   -e "Develop image$?."
+   -v - -repeat @#
+   -blackpoint16 .007 
+   -contrast_stretch 0.02,0.007,16 
    -done -v +
 
 #@gmic l16develop_write_full : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
@@ -63,7 +89,7 @@ blackpoint:
    -v - -repeat @#
    --histogram_cumul {2^$2}
    -div[-1] @{0,#}
-   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -push 0 -do -push=[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
    -v + -v + -v +  
    -cut {@{*,-1}},{2^$2-1} -sub {@{*,-1}}
@@ -78,7 +104,7 @@ blackpoint8:
    -v - -repeat @#
    --histogram_cumul 256
    -div[-1] @{0,#}
-   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -push 0 -do -push=[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
    -cut {@{*,-1}},255 -sub {@{*,-1}}
    -pop   
@@ -91,7 +117,7 @@ blackpoint16:
    -v - -repeat @#
    --histogram_cumul 1024
    -div[-1] @{0,#}
-   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -push 0 -do -push=[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
    -cut {@{*,-1}},65535 -sub {@{*,-1}*64}
    -pop
@@ -104,7 +130,7 @@ whitepoint:
    -v - -repeat @#
    --histogram_cumul {2^$2}
    -div[-1] @{0,#}
-   -push {2^$2-1} -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>$1}
+   -push {2^$2-1} -do -push=[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>$1}
    -rm[-1]
    -f min({2^$2-1},i+@{*,-1})
    -pop
@@ -117,7 +143,7 @@ whitepoint8:
    -v - -repeat @#
    --histogram_cumul 256
    -div[-1] @{0,#}
-   -push 255 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>$1}
+   -push 255 -do -push=[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>$1}
    -rm[-1]
    -f min(255,i+@{*,-1})
    -pop
@@ -165,9 +191,9 @@ contrast_stretch:
    -v - -repeat @#
    --histogram_cumul {if($3<=8,256,1024)}
    -div[-1] @{0,#} [-1]
-   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -push 0 -do -push=[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
-   -push if($3<=8,256,1023) -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
+   -push if($3<=8,256,1023) -do -push=[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
    -rm[-1] 
    -_contrast_stretch {@{*,-2}*if($3<=8,1,64)},{@{*,-1}*if($3<=8,1,64)},0,{if($3<=8,255,65535)}
    -pop -pop
@@ -180,9 +206,9 @@ contrast_stretch8:
    -v - -repeat @#
    --histogram_cumul 256
    -div[-1] @{0,#} [-1]
-   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -push 0 -do -push=[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
-   -push 255 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
+   -push 255 -do -push=[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
    -rm[-1] 
    -_contrast_stretch {@{*,-2}},{@{*,-1}},0,255
    -pop -pop
@@ -195,9 +221,9 @@ contrast_stretch16:
    -v - -repeat @#
    --histogram_cumul 1024
    -div[-1] @{0,#} [-1]
-   -push 0 -do -pushr[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
+   -push 0 -do -push=[-1] {@{*,-1}+1} -while {@{-1,@{*,-1}}<$1}
    -rm[-1]
-   -push 1023 -do -pushr[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
+   -push 1023 -do -push=[-1] {@{*,-1}-1} -while {@{-1,@{*,-1}}>(1-$2)}
    -rm[-1] 
    -_contrast_stretch {{@{*,-2}}*64},{{@{*,-1}}*64},0,65535
    -pop -pop
