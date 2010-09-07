@@ -31,13 +31,13 @@ l16develop_2 :
    -contrast_stretch 0.005,0.005,16
    -done -v +
 
-#@gmic g16develop_1 : : Process 16 bit image that has gamma.
+#@gmic g16develop : : Process 16 bit image that has gamma.
 g16develop :
    -e "Develop image$?."
    -v - -repeat @#
-   -sigmoidal_contrast16 4.8,.5 
+   -sigmoidal_contrast16 4.8,.52 
    -blackpoint16 .007 
-   -contrast_stretch 0.007,0.003,16 
+   -contrast_stretch 0.009,0.003,16 
    -done -v +
 
 #@gmic l16develop_write_full : '"outfile"' : Develop a linear 16 bit image and write to 16 bit file.
