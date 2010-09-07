@@ -14,7 +14,18 @@ GMICRAW_HOME = sys.path[0]
 CAMERA_PROFILE = os.path.join(GMICRAW_HOME, 'Profiles', 'Camera', 'icc-profiles-canon-eos400d', 'canon_eos400d_faithful.icc')
 GMIC_EXTENSION = os.path.join(GMICRAW_HOME, 'gmicext.gmic')    
 
-DCRAW_SATURATION=3726
+dcraw_profiles = { 
+    'standard' : {
+        'dcraw_flags' : { 'linearity' : '-6', 
+                        'whitebalance': '-w',
+                        'logging': None,
+                        'whitelevel': '-W'},
+        'dcraw_options' : { '-n' : '50', 
+                          '-k': '272',
+                          '-p': CAMERA_PROFILE}
+        }
+    }
+
 
 def main(argv=None):
     if argv is None:
@@ -25,105 +36,69 @@ def main(argv=None):
     gmic_args = argv[start_of_gmic_args + 2:]
     raw_file = argv[start_of_gmic_args + 1]
     
-    linearity_defined = False
-    whitebalance_defined = False
-    size_defined = False
-    input_profile_defined = False
-    saturation_defined = False
     dcraw_args = []
 
-    dcraw_default_flags = { 'linearity' : '-6', 
-                            'whitebalance': '-w'}
-
-    dcraw_default_options = { '-n' : '50', 
-                              '-k': '272',
-                              '-p': CAMERA_PROFILE}
+    dcraw_profile_name = dcraw_args_iter.next()
+    dcraw_profile = dcraw_profiles.get(dcraw_profile_name, 'standard')
+    dcraw_flags = dcraw_profile['dcraw_flags']
+    dcraw_options = dcraw_profile['dcraw_options']
 
     # Use same option names as dcraw uses
     while True:
         try:
             dcraw_arg = dcraw_args_iter.next()
-            if dcraw_arg == '-6' and not linearity_defined:
-                print '16 bit non-linear processing'
-                dcraw_args.append(dcraw_arg)
-                linearity_defined = True
-            if dcraw_arg == '-4' and not linearity_defined:
-                print '16 bit linear processing'
-                dcraw_args.append(dcraw_arg)
-                linearity_defined = True
-            if dcraw_arg == '-h' and not size_defined:
-                print 'Half size image'
-                dcraw_args.append(dcraw_arg)
-                size_defined = True
-            elif dcraw_arg == '-a' and not whitebalance_defined:
-                print 'Auto white balance'
-                dcraw_args.append(dcraw_arg)
-                whitebalance_defined = True
-            elif dcraw_arg == '-w' and not whitebalance_defined:
-                print 'Camera white balance'
-                dcraw_args.append(dcraw_arg)
-                whitebalance_defined = True
-            elif dcraw_arg == '-S' and not saturation_defined:
-                print 'Saturation'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-                saturation_defined = True
-            elif dcraw_arg == '-H':
-                print 'Highlight handling'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-p':
-                print 'Camera ICC profile'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-o':
-                print 'Output color space'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-K':
-                print 'Darkframe'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-k':
-                print 'Darkness'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-n':
-                print 'Wavelet denoising'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
+
+            if dcraw_arg == '-h':
+                dcraw_flags.append(dcraw_arg)
             elif dcraw_arg == '-v':
-                print 'Verbose'
-                dcraw_args.append(dcraw_arg)
-            elif dcraw_arg == '-b':
-                print 'Brightness'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-m':
-                print 'Median filtering'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
-            elif dcraw_arg == '-i':
-                print 'Interpolation. 0=bilinear 1=VNG 2=PPG 3=AHD'
-                dcraw_args.append(dcraw_arg)
-                dcraw_args.append(dcraw_args_iter.next())
+                dcraw_flags['logging'] = dcraw_arg
+            elif dcraw_arg == '-a' or dcraw_arg == '-w':
+                dcraw_flags['whitebalance'] = dcraw_arg
+            elif dcraw_arg == '-A':
+                dcraw_flags['whitebalance'] = ('-r '+ dcraw_args_iter.next() + ' ' + dcraw_args_iter.next() + 
+                 ' ' + dcraw_args_iter.next() + ' ' +dcraw_args_iter.next())
+            elif dcraw_arg == '-r':
+                dcraw_flags['whitebalance'] = ('-r '+ dcraw_args_iter.next() + ' ' + dcraw_args_iter.next() + 
+                 ' ' + dcraw_args_iter.next() + ' ' +dcraw_args_iter.next())
+            if dcraw_arg == '-6' or dcraw_arg == '-4':
+                dcraw_flags['linearity'] = dcraw_arg
             elif dcraw_arg == '-W':
-                print 'Use fixed white level'
-                dcraw_args.append(dcraw_arg)
+                dcraw_flags['whitelevel'] = dcraw_arg
+            elif dcraw_arg == '+W': # Non-standard option to disable auto whitelevel
+                dcraw_flags['whitelevel'] = ''
+            elif dcraw_arg == '-S':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-H':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-p':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '+p': # Non-standard option to disable camera profile
+                del dcraw_options['-p']
+            elif dcraw_arg == '-o':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-K':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-k':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-n':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-b':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-m':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
+            elif dcraw_arg == '-i':
+                dcraw_options[dcraw_arg] = dcraw_args_iter.next()
         except StopIteration:
             break
 
-    # Defaults
-    if not linearity_defined:
-        dcraw_args.append('-6') 
-    if not linearity_defined:
-        dcraw_args.append('-w') 
-    if not input_profile_defined:
-        dcraw_args.append('-p')
-        dcraw_args.append(CAMERA_PROFILE)
-    #if not saturation_defined:
-    #    dcraw_args.append('-S')
-    #    dcraw_args.append(str(DCRAW_SATURATION))
+    dcraw_args = []
+
+    for option, value in dcraw_options.iteritems():
+            dcraw_args.append(option)
+            dcraw_args.append(value)
+    for flag in dcraw_flags.itervalues():
+        if not flag is None:
+            dcraw_args.append(flag)
 
     processImage(raw_file, dcraw_args, gmic_args)
 
@@ -146,9 +121,9 @@ def processImage(raw_file, dcraw_args, gmic_args):
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except Exception, e:
-        print ("An error occurred")
-        sys.exit(1)
+#    except Exception, e:
+#        print ("An error occurred")
+#        sys.exit(1)
     except KeyboardInterrupt:
         print "Interrupted"
         sys.exit(1)
