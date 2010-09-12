@@ -485,7 +485,7 @@ gimp_develop :
    -blackpoint8 $3
    -contrast_stretch $4,$5
 
-#@gimp Develop : gimp_develop2, gimp_develop2
+#@gimp Develop 2 : gimp_develop2, gimp_develop2
 #@gimp : note = note{"<b>Sigmoidal luminance, blackpoint, contrast stretch</b>"}
 #@gimp : Contrast = float(4,3,5)
 #@gimp : Midline = float(0.50,0,1)
@@ -497,3 +497,4 @@ gimp_develop2 :
    -blackpoint8 $3
    -contrast_stretch $4,$5
 
+#@gimp _
