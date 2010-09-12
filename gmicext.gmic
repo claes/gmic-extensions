@@ -1,9 +1,5 @@
 # G'MIC extensions. Focused on RAW file processing
 #
-# For now, can be applied as
-# dcraw -w -T -4 file.cr2
-# which creates file.tiff. Then followed by 
-# gmic gmicext.gmic file.tiff -l16develop newfile.tiff
 
 #@gmic l16develop : : Process linear 16 bit image.
 l16develop :
@@ -161,16 +157,8 @@ whitepoint8:
    -mv[-1] 0 -done -v +
 
 
-#@gmic omnistretch: black, white, bit-depth, colormodel:
+#@gmic omnistretch: black, white, colormodel, bit-depth: Experimental omnistretch
 omnistretch:
-   -skip ${1=0.02},${2=0.01},${3=8},${4=3}
-   -e "Stretching contrast of $3-bit image$? with black $1 and white $2."
-   -v - -repeat @#
-   -apply_channels "-contrast_stretch[-1] $1,$2,$3",$4,0
-   -mv[-1] 0 -done -v +
-
-#@gmic omnistretch: black, white, colormodel, bit-depth:
-omnistretch2:
    -skip ${1=0.02},${2=0.01},${3=0},${4=8}
    -e "Stretching contrast of $3-bit image$? with black $1 and white $2."
    -v - -repeat @#
@@ -188,7 +176,7 @@ omnistretch2:
       -rgb2hsi[-1] -split[-1] c 
       -contrast_stretch[-3] $1,$2,$4 
       -append[-3--1] c -hsi2rgb[-1]	
-   -elif {$3==4} #HSI
+   -elif {$3==4} #LAB
       -rgb2lab[-1] -split[-1] c 
       -contrast_stretch[-3] $1,$2,$4 
       -append[-3--1] c -lab2rgb[-1]	
@@ -437,6 +425,34 @@ resize_named :
     -mv[-1] 0 -done -v +
 
 
+#@gmic retinex : '"named_size"' : Experimental retinex command. 
+retinex:
+   -e "Retinex processing"
+   -v - -repeat @#
+   [0] [0] [0] [0] [0]
+   -_retinex_blur[1] 2
+   -_retinex_blur[2] 8
+   -_retinex_blur[3] 20
+   -_retinex_blur[4] 100
+   -_retinex_gray[5] 
+   -compose_average[1,2]	
+   -compose_average[2,3]	
+   -compose_average[1,2]	
+   [1]
+   -compose_multiply[1,2]
+   -normalize[1] 0,255
+   -normalize[2] 0,255
+   -add[1,2]
+   -normalize[1] 0,255
+   -rm[0]		
+   -mv[-1] 0 -done -v +	     
+
+_retinex_blur: 
+   [0] -blur[1] $1 -div[0] [1] -add 1 -log[0] -rm[1]
+
+_retinex_gray: 
+   [0] -to_gray[1] -div[0] [1] -add 1 -log[0] -rm[1]
+
 #
 # Gimp
 #
@@ -473,14 +489,14 @@ gimp_blackpoint:
 gimp_whitepoint:
     -whitepoint8 $1
 
-#@gimp Develop : gimp_develop, gimp_develop
+#@gimp Develop 1: gimp_develop1, gimp_develop1
 #@gimp : note = note{"<b>Sigmoidal contrast, blackpoint, contrast stretch</b>"}
 #@gimp : Contrast = float(5,0,20)
 #@gimp : Midline = float(0.5,0,1)
 #@gimp : Blackpoint = float(0.01,0,1)
 #@gimp : Black stretch= float(0.02,0,1)
 #@gimp : White stretch = float(0.01,0,1)
-gimp_develop :
+gimp_develop1 :
    -sigmoidal_contrast8 $1,$2
    -blackpoint8 $3
    -contrast_stretch $4,$5
@@ -496,5 +512,12 @@ gimp_develop2 :
    -apply_sigmoidal_luminance $1,$2,8
    -blackpoint8 $3
    -contrast_stretch $4,$5
+
+# #@gimp Omnistretch : gimp_omnistretch, gimp_omnistretch
+# #@gimp : Black stretch= float(0.01,0,1)
+# #@gimp : White stretch = float(0.01,0,1)
+# #@gimp : Color model = choice(0,"RGB", "HSL", "HSV", "HSI", "LAB")
+# gimp_omnistretch :
+#    -omnistretch  $1,$2,$3,8
 
 #@gimp _
